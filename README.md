@@ -112,16 +112,26 @@ pip install pyinstaller
 Hopefully you've installed this in your virtual environment. You may want to double check that pyinstaller is actually in your virtual environment by running the following:
 
 ```
-where pyinstaller
+pip show pyinstaller
 ```
 
 It should give you back data saying that it's in your virtual environment folder. If not, it just won't run correctly.
 
+Of course, if you're not installing it in a virtual environment, you can run the next command and it will check if PyInstaller is The Windows PATH environmental variable.  If you just installed it inside of your virtual environment, it's not going to be in the Windows path.
+
+```
+where pyinstaller
+```
+
+
+
 PyInstaller doesn't always pick up all the dependencies and there's a couple dependencies in this file that you will want to pick up. So to force it to pick up something, you can run the following command:
 
 ```
-pyinstaller --collect-all replicate --collect-all dotenv MP3toMD.py
+pyinstaller --collect-all replicate --collect-all dotenv GUIMP3_2transcript.py
 ```
+
+This collects all the dependencies and then it tries running pyinstaller again. By the way, I also have upx installed, which attempts to skinny down any executable. You may want to install it.
 
 During compile, the replicate and the .env were two problematic things which were not picked up by PyInstaller. By throwing the collect all after it, it will actually update your spec file, and then it will try to run the spec file. This was successful in my run and install. This will install it into your build subdirectory where you can run it. It will also create another subdirectory by it. You will need to copy your .env file into it. You could try to compile it all into one, but that slows things down and is a possible future task for me to try.
 
