@@ -99,3 +99,36 @@ You will find now in the subdirectory another file with the extension MD, which 
 
 After you have processed one file, it will ask you if you want to continue. Of course, if you don't, hit no, and the program will abort, and allow you to go back to whatever you were doing before in your command-line window.
 
+#### Other next steps you can do with this repository: hints and tips
+
+On my own machine, I have gone farther and turned this into an executable file. The only challenge is it turns out to be relatively a more inconvenient thing to work through. Generally, the file has been tested to be able to be compiled via the following method. Compiling Python programs is never as easy as what it should be, mainly because you don't always pick up all the libraries or it makes assumptions about where various files should be that aren't immediately obvious unless you're doing a lot of compiling and are really familiar with the characteristics of the Python libraries and PyInstaller. But with that being written, let me go ahead and give you some tips in terms of what I did to get the program compiled.
+
+Set up a virtual environment for 3.12. I use venv for everything on my machine.
+
+Invoke the virtual environment.
+
+Use this to clone the GitHub as above.
+
+Transfer into your cloned subdirectory.
+
+Install PyInstaller via pip install pyinstaller
+
+Hopefully you've installed this in your virtual environment.You may want to double check that pyinstaller is actually in your virtual environment by running the following:
+
+where pyinstaller
+
+It should give you back data saying that it's in your virtual environment folder.  If not, it just won't run correctly.
+
+PyInstaller doesn't always pick up all the dependencies and there's a couple dependencies in this file that you will want to pick up. So to force it to pick up something, you can run the following command:
+
+pyinstaller --collect-all replicate --collect-all dotenv MP3toMD.py
+
+During compile, the replicate and the .env were two problematic things which were not picked up by PyInstaller. By throwing the collect all after it, it will actually update your spec file, and then it will try to run the spec file. This was successful in my run and install. This will install it into your build subdirectory where you can run it. It will also create another subdirectory by it. You will need to copy your .env file into it. You could try to compile it all into one, but that slows things down and is a possible future task for me to try.
+
+Unfortunately, after I made an executable, I then pushed everything to git, and my git install forced me to also make some changes to the main Python script. I cannot guarantee you that this won't give you some difficulty trying to compile it with PyInstaller. So, it's a development activity to be done. Somebody can volunteer to help patch here, or clone and maybe put an issue down that you fixed it in your own GitHub.
+
+
+
+
+
+
