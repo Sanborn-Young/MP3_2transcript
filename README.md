@@ -133,8 +133,18 @@ pyinstaller --collect-all replicate --collect-all dotenv GUIMP3_2transcript.py
 
 This collects all the dependencies and then it tries running pyinstaller again. By the way, I also have upx installed, which attempts to skinny down any executable. You may want to install it.
 
-During compile, the replicate and the .env were two problematic things which were not picked up by PyInstaller. By throwing the collect all after it, it will actually update your spec file, and then it will try to run the spec file. This was successful in my run and install. This will install it into your build subdirectory where you can run it. It will also create another subdirectory by it. You will need to copy your .env file into it. You could try to compile it all into one, but that slows things down and is a possible future task for me to try.
+During compile, the replicate and the dotenv were two problematic things which were not picked up by PyInstaller. By throwing the collect all after it, it will actually update your spec file, and then it will try to run the spec file. This was successful in my run and install. 
 
-Unfortunately, after I made an executable, I then pushed everything to git, and my git install forced me to also make some changes to the main Python script. I cannot guarantee you that this won't give you some difficulty trying to compile it with PyInstaller. So, it's a development activity to be done. Somebody can volunteer to help patch here, or clone and maybe put an issue down that you fixed it in your own GitHub.
+You will need to go into dist, then you will need to go into the guimp3_2 transcript, and then you will see another directory inside of there called _internal. The following should give you an idea of the structure.
+
+MP3_2transcript\dist\GUIMP3_2transcript
+
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d----l         7/20/2025   1:35 AM                _internal
+-a---l         7/20/2025   1:33 AM       12595467 GUIMP3_2transcript.exe
+
+Remember that .env file that has your Replicate key in it? You will need to copy it into the _internal directory.
 
 Finally, there is an icon file in the resource subdirectory if you want to put an icon on your exe. I had some difficulty in getting this to go with PyInstaller, so on my own personal machine I simply used ResourceHacker, an excellent utility that allows you to update various things such as icons on programs. ResourceHacker can be found at: https://www.angusj.com/resourcehacker/
