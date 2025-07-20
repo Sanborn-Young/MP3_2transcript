@@ -127,8 +127,7 @@ During compile, the replicate and the .env were two problematic things which wer
 
 Unfortunately, after I made an executable, I then pushed everything to git, and my git install forced me to also make some changes to the main Python script. I cannot guarantee you that this won't give you some difficulty trying to compile it with PyInstaller. So, it's a development activity to be done. Somebody can volunteer to help patch here, or clone and maybe put an issue down that you fixed it in your own GitHub.
 
-
-
+Finally, there is an icon file in the resource subdirectory if you want to put an icon on your exe. I had some difficulty in getting this to go with PyInstaller, so on my own personal machine I simply used ResourceHacker, an excellent utility that allows you to update various things such as icons on programs. ResourceHacker can be found here. [Resource Hacker](https://www.angusj.com/resourcehacker/)
 
 
 
