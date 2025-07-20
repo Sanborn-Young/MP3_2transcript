@@ -75,7 +75,7 @@ However, the reason that we included a setup file and you did the pip install . 
 mp3-2transcript
 ```
 
-As of my upload in version 1.0, this seems to be working. For if any reason it doesn't, you will need to type in the other at the command line and issue a bug report.
+As of my upload in version 1.0, this seems to be working. For if any reason it doesn't, you will need to type in the other at the command line and issue a bug report.  Also, this is dependent upon Replicate not changing the Identification of the model in their API. If something blows up, this may be the source of it, and you would need to file a bug report so I can check.
 
 ## Actual usage once program is invoked
 
