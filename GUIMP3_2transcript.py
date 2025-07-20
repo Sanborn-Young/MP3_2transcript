@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import os
 import sys
 import threading
@@ -12,11 +11,23 @@ import replicate
 import re
 
 def load_token():
-    env_path = Path(__file__).parent / '.env'
-    load_dotenv(dotenv_path=env_path)
+    # load_dotenv() searches for the .env file in the current working directory.
+    # This allows the user to place their .env file in the same folder as their MP3s
+    # and run the command from there.
+    if not load_dotenv():
+        messagebox.showerror(
+            "Configuration Error",
+            "Could not find the .env file.\n\nPlease make sure a .env file with your "
+            "REPLICATE_API_TOKEN is present in the directory where you are running the command."
+        )
+        sys.exit(1)
+
     token = os.getenv('REPLICATE_API_TOKEN')
     if not token:
-        messagebox.showerror("Error", "REPLICATE_API_TOKEN not found in .env")
+        messagebox.showerror(
+            "Configuration Error",
+            "REPLICATE_API_TOKEN not found in the loaded .env file."
+        )
         sys.exit(1)
     return token
 
@@ -35,34 +46,32 @@ def convert_json_to_transcript(json_path):
     """
     with open(json_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
-    
+
     # Support both possible output locations
     segments = None
     if isinstance(data.get("output"), dict) and "segments" in data["output"]:
         segments = data["output"]["segments"]
     elif "segments" in data:
         segments = data["segments"]
-    
+
     transcript_text = ""
-    
     if segments:
         # Find first start time
         earliest = min(
             (seg.get("start", 0) for seg in segments if seg.get("start") is not None),
             default=0
         )
-        
+
         next_timer = (int(earliest) // 300) * 300
         segments = sorted(segments, key=lambda s: s.get("start", 0))
-        
         current_speaker = None
         current_text = ""
-        
+
         for seg in segments:
             start = seg.get("start", 0)
             text = seg.get("text", "").strip()
             speaker = seg.get("speaker", "UNKNOWN")
-            
+
             # Insert timer markers
             while start >= next_timer:
                 if current_text:
@@ -70,14 +79,14 @@ def convert_json_to_transcript(json_path):
                     current_text = ""
                 transcript_text += f"\n--- [TIMER: {seconds_to_timestamp(next_timer)}] ---\n\n"
                 next_timer += 300
-            
+
             # Handle speaker change
             if speaker != current_speaker:
                 if current_text:
                     transcript_text += f"Speaker {current_speaker}: {current_text.strip()}\n\n"
                     current_text = ""
                 current_speaker = speaker
-            
+
             if text:
                 current_text += text + " "
         
@@ -86,7 +95,7 @@ def convert_json_to_transcript(json_path):
     else:
         # No diarization segments found → simple notice
         transcript_text = "[No speaker segments found in JSON]\n"
-    
+
     return transcript_text
 
 def extract_speakers(content):
@@ -99,14 +108,12 @@ def extract_speakers(content):
 def get_replacements(speakers):
     """Create a dialog to get new names for each speaker, using a dedicated root."""
     dialog_root = tk.Tk()
-    dialog_root.withdraw()  # Hide the dialog root
-    
+    dialog_root.withdraw() # Hide the dialog root
     replacements = {}
     for speaker in speakers:
         new_name = simpledialog.askstring("Rename Speaker", f"Enter new name for {speaker} (leave blank to keep original):", parent=dialog_root)
-        if new_name:  # Only replace if a new name is provided
+        if new_name: # Only replace if a new name is provided
             replacements[speaker] = new_name
-    
     dialog_root.destroy()
     return replacements
 
@@ -122,36 +129,39 @@ def add_speaker_separation(content, replacements):
     """Insert a newline before each bold speaker name for separation."""
     if not replacements:
         return content
-    
+
     # Get all possible markdown names
     markdown_names = [f"**{new}**" for new in replacements.values()]
-    
     lines = content.splitlines()
     separated_lines = []
     
     for line in lines:
         stripped = line.strip()
-        if any(stripped.startswith(name) for name in markdown_names):
-            separated_lines.append('')  # Add empty line for separation
+        is_speaker_line = any(stripped.startswith(name) for name in markdown_names)
+        
+        # Add a newline before a speaker line if the previous line wasn't empty
+        if is_speaker_line and separated_lines and separated_lines[-1].strip() != '':
+            separated_lines.append('')
+        
         separated_lines.append(line)
-    
+
     return '\n'.join(separated_lines)
 
 def get_speaker_count(parent):
     """Get the number of speakers from user input."""
     while True:
         count_str = simpledialog.askstring(
-            "Speaker Count", 
+            "Speaker Count",
             "How many speakers are in this audio file?\n(Enter a number between 1-10, or leave blank for auto-detection):",
             parent=parent
         )
-        
-        if count_str is None:  # User cancelled
+
+        if count_str is None: # User cancelled
             return None
         
-        if count_str.strip() == "":  # Auto-detection
+        if count_str.strip() == "": # Auto-detection
             return None
-        
+            
         try:
             count = int(count_str)
             if 1 <= count <= 10:
@@ -163,9 +173,9 @@ def get_speaker_count(parent):
 
 def transcribe(mp3_path, speaker_count, status_var, status_win, root):
     status_var.set("Uploading…")
+
     token = load_token()
     client = replicate.Client(api_token=token)
-    
     model = client.models.get("thomasmol/whisper-diarization")
     version = model.versions.list()[0].id
     
@@ -179,12 +189,14 @@ def transcribe(mp3_path, speaker_count, status_var, status_win, root):
             if speaker_count is not None:
                 input_params["num_speakers"] = speaker_count
                 status_var.set(f"Transcribing with {speaker_count} speakers…")
-            
+            else:
+                status_var.set("Transcribing with auto-detected speakers…")
+
             output = replicate.run(
                 f"thomasmol/whisper-diarization:{version}",
                 input=input_params
             )
-    
+
     except Exception as e:
         messagebox.showerror("Error", f"Transcription failed:\n{e}", parent=status_win)
         status_win.destroy()
@@ -201,16 +213,16 @@ def transcribe(mp3_path, speaker_count, status_var, status_win, root):
         return
 
     status_var.set(f"Saved JSON: {json_path.name}")
-
+    
     # Prompt for Markdown conversion
     if messagebox.askyesno("Convert to Markdown?", "Would you like to create a .md transcript with speaker renaming?", parent=status_win):
         try:
             # Generate base transcript from JSON
             transcript_content = convert_json_to_transcript(str(json_path))
-
+            
             # Ask if user wants to rename speakers
             rename = messagebox.askyesno("Rename Speakers", "Do you want to turn speaker variables into names?", parent=status_win)
-
+            
             if rename:
                 speakers = extract_speakers(transcript_content)
                 if not speakers:
@@ -220,15 +232,13 @@ def transcribe(mp3_path, speaker_count, status_var, status_win, root):
                     if replacements:
                         transcript_content = replace_in_content(transcript_content, replacements)
                         transcript_content = add_speaker_separation(transcript_content, replacements)
-
+            
             # Save to .md file
             base = Path(mp3_path).stem
             md_path = Path(mp3_path).with_name(f"{base}.md")
             with open(md_path, 'w', encoding='utf-8') as out:
                 out.write(transcript_content)
-
             messagebox.showinfo("Done", f"Transcript saved to: {md_path.name}", parent=status_win)
-
         except Exception as e:
             messagebox.showerror("Error", f"Failed to convert to Markdown:\n{e}", parent=status_win)
 
@@ -239,7 +249,7 @@ def prompt_next(status_win, root):
     process_another = messagebox.askyesno("Process Another?", "Would you like to process another file?", parent=status_win)
     status_win.destroy()
     if process_another:
-        main(root)  # Restart with existing root to avoid recursion depth issues
+        main(root) # Restart with existing root to avoid recursion depth issues
     else:
         # FIXED: Properly exit when user chooses not to process another file
         root.quit()
@@ -251,7 +261,7 @@ def main(existing_root=None):
         root.withdraw()
     else:
         root = existing_root
-
+    
     mp3_file = filedialog.askopenfilename(
         title="Select an MP3 file",
         filetypes=[("MP3 Files", "*.mp3")],
@@ -262,18 +272,18 @@ def main(existing_root=None):
         if existing_root is None:
             root.quit()
             root.destroy()
-        return  # CHANGED: return instead of sys.exit for cleaner handling
+        return # CHANGED: return instead of sys.exit for cleaner handling
 
     if not os.path.isfile(mp3_file):
         messagebox.showerror("Error", f"File not found: {mp3_file}", parent=root)
         if existing_root is None:
             root.quit()
             root.destroy()
-        return  # CHANGED: return instead of sys.exit
-
+        return # CHANGED: return instead of sys.exit
+    
     # NEW: Get speaker count after file selection
     speaker_count = get_speaker_count(root)
-    
+
     # If user cancelled speaker count dialog, exit gracefully
     if speaker_count is None and messagebox.askokcancel("Cancel", "No speaker count specified. Continue with auto-detection?", parent=root) is False:
         if existing_root is None:
@@ -293,7 +303,7 @@ def main(existing_root=None):
         args=(mp3_file, speaker_count, status_var, status_win, root),
         daemon=True
     ).start()
-
+    
     status_win.mainloop()
 
 if __name__ == "__main__":
