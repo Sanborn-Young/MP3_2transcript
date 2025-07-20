@@ -12,13 +12,30 @@ import replicate
 import re
 
 def load_token():
-    env_path = Path(__file__).parent / '.env'
-    load_dotenv(dotenv_path=env_path)
+    # Try multiple locations for .env file
+    possible_paths = [
+        Path(__file__).parent / '.env',  # Original location (same dir as script)
+        Path.cwd() / '.env',             # Current working directory
+        Path.home() / '.env',            # User home directory
+    ]
+    
+    env_path = None
+    for path in possible_paths:
+        if path.exists():
+            env_path = path
+            break
+    
+    if env_path:
+        load_dotenv(dotenv_path=env_path)
+    else:
+        load_dotenv()  # Let python-dotenv search default locations
+    
     token = os.getenv('REPLICATE_API_TOKEN')
     if not token:
         messagebox.showerror("Error", "REPLICATE_API_TOKEN not found in .env")
         sys.exit(1)
     return token
+
 
 def seconds_to_timestamp(seconds):
     h = int(seconds // 3600)
